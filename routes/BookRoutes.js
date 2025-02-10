@@ -5,6 +5,7 @@ const BorrowRequest = require("../models/borrowRequest");
 const Book = require("../models/Book");
 const User = require("../models/User");
 const cloudinary = require("../config/cloudinary");
+const streamifier = require("streamifier");
 require("dotenv").config();
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -14,13 +15,14 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
   try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      cloudinary.uploader.upload_stream(
+      const uploadStream = cloudinary.uploader.upload_stream(
           { resource_type: "raw" },
           (error, result) => {
-              if (error) return res.status(500).json({ message: "Cloudinary upload failed", error });
+              if (error) return res.status(500).json({ message: "Upload failed", error });
               res.json({ pdfUrl: result.secure_url });
           }
-      ).end(req.file.buffer);
+      );
+      streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
   } catch (err) {
       res.status(500).json({ message: "Upload failed", error: err.message });
   }

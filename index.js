@@ -6,15 +6,9 @@ const mongoose = require('mongoose');
 const bookRoutes = require('./routes/BookRoutes');
 const userRoutes = require("./routes/authRoutes");
 require("dotenv").config();
-
 const app = express();
 app.use(express.json()) 
-
 app.use(cors());
-
-app.use('/uploads2', express.static(path.join(__dirname, 'uploads2')));
-
-
 app.use('/api/books' ,bookRoutes);
 app.use("/api/auth",userRoutes);
 
