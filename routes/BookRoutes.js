@@ -17,16 +17,28 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
 
       const uploadStream = cloudinary.uploader.upload_stream(
           { resource_type: "raw" },
-          (error, result) => {
+          async (error, result) => {
               if (error) return res.status(500).json({ message: "Upload failed", error });
-              res.json({ pdfUrl: result.secure_url });
+
+              // Save the PDF URL in MongoDB
+              const newBook = new Book({
+                  title: req.body.title,
+                  author: req.body.author,
+                  category: req.body.category,
+                  pdfUrl: result.secure_url, // Store Cloudinary URL
+              });
+              await newBook.save();
+
+              res.json({ message: "File uploaded successfully", pdfUrl: result.secure_url });
           }
       );
+
       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
   } catch (err) {
       res.status(500).json({ message: "Upload failed", error: err.message });
   }
 });
+
 
 
 router.get("/book", async (req, res) => {
