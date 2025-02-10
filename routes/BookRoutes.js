@@ -1,42 +1,31 @@
-const multer = require('multer');
-const path = require('path');
-const express = require('express');
-const router = express.Router();
-const BorrowRequest = require('../models/borrowRequest');
-const Book = require('../models/Book.js');
+const express = require("express");
+const multer = require("multer");
+const path = require("path");
+const BorrowRequest = require("../models/borrowRequest");
+const Book = require("../models/Book");
+const User = require("../models/User");
+const cloudinary = require("../config/cloudinary");
 require("dotenv").config();
-const User = require("../models/User")
+const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads2/'),
-  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname)),
-});
 
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype !== 'application/pdf') {
-      return cb(new Error('Only PDF files are allowed'), false);
-    }
-    cb(null, true);
-  }
-});
-
-router.post('/uploads', upload.single('pdf'), async (req, res) => {
+router.post("/upload", upload.single("pdf"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-    const { title, author, category } = req.body;
-    if (!title || !author || !category) return res.status(400).json({ message: "All fields are required" });
-
-    const newBook = new Book({ title, author, category, available: true, pdfPath: req.file.filename });
-    await newBook.save();
-
-    res.status(200).json({ message: 'Book uploaded successfully!', book: newBook });
+      cloudinary.uploader.upload_stream(
+          { resource_type: "raw" },
+          (error, result) => {
+              if (error) return res.status(500).json({ message: "Cloudinary upload failed", error });
+              res.json({ pdfUrl: result.secure_url });
+          }
+      ).end(req.file.buffer);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to upload book', error: err.message });
+      res.status(500).json({ message: "Upload failed", error: err.message });
   }
 });
+
 
 router.get("/book", async (req, res) => {
   try {
