@@ -13,31 +13,49 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.post("/upload", upload.single("pdf"), async (req, res) => {
   try {
-      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      console.log("File received:", req.file.originalname);
 
       const uploadStream = cloudinary.uploader.upload_stream(
           { resource_type: "raw" },
           async (error, result) => {
-              if (error) return res.status(500).json({ message: "Upload failed", error });
+              if (error) {
+                  console.error("Cloudinary Upload Error:", error);
+                  return res.status(500).json({ message: "Cloudinary upload failed", error });
+              }
 
-              // Save the PDF URL in MongoDB
-              const newBook = new Book({
-                  title: req.body.title,
-                  author: req.body.author,
-                  category: req.body.category,
-                  pdfUrl: result.secure_url, // Store Cloudinary URL
-              });
-              await newBook.save();
+              console.log("Cloudinary Upload Successful:", result.secure_url);
 
-              res.json({ message: "File uploaded successfully", pdfUrl: result.secure_url });
+              try {
+                  // Save the PDF URL in MongoDB
+                  const newBook = new Book({
+                      title: req.body.title,
+                      author: req.body.author,
+                      category: req.body.category,
+                      pdfUrl: result.secure_url, // Store Cloudinary URL
+                  });
+
+                  await newBook.save();
+                  console.log("Book saved successfully:", newBook);
+
+                  res.json({ message: "File uploaded successfully", pdfUrl: result.secure_url });
+              } catch (dbError) {
+                  console.error("MongoDB Save Error:", dbError);
+                  res.status(500).json({ message: "Failed to save book in MongoDB", error: dbError });
+              }
           }
       );
 
       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
   } catch (err) {
+      console.error("General Upload Error:", err);
       res.status(500).json({ message: "Upload failed", error: err.message });
   }
 });
+
 
 
 
