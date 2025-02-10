@@ -3,7 +3,7 @@ const path = require('path');
 const express = require('express');
 const router = express.Router();
 const BorrowRequest = require('../models/borrowRequest');
-const Book = require('../models/Book');
+const Book = require('../models/Book.js');
 require("dotenv").config();
 const User = require("../models/User")
 
